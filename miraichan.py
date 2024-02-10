@@ -14,7 +14,7 @@ headers = {
         "Cookie": None,
         "User-Agent": "python/2.7"
         }
-buffer_size = 10  # Input buffer size of worker (bytes)
+buffer_size = 128  # Input buffer size of worker (bytes)
 debug = False    # Be very verbose about packet requests / responses
 suicide = False  # Global flag to gracefully terminate threads
 
@@ -44,6 +44,9 @@ class _FailError(Exception):
     pass
 
 class _NoAuthError(Exception):
+    pass
+
+class _UncaughtError(Exception):
     pass
 
 class FileMutex:
@@ -91,7 +94,7 @@ class SmartGet:
         except Exception as e:
             if (debug):
                 raise e
-            raise _FailError    # Hail mary
+            raise _UncaughtError
 
         for c in creds:
             c = tuple(c)
@@ -144,7 +147,7 @@ class SmartGet:
             except Exception as e:
                 if (debug):
                     raise e
-                raise _FailError    # Hail mary
+                raise _UncaughtError
 
         raise _FailError  # Exhausted all creds
 
@@ -196,12 +199,15 @@ def worker(t_fm, o_fm, p_fm, schemes, paths, creds):
                         buf.append("fail,%s,%s,%d,%s" % (s[0], t, s[1], p))
                     except _NoAuthError:
                         buf.append("noauth,%s,%s,%d,%s" % (s[0], t, s[1], p))
+                    except _UncaughtError:
+                        buf.append("uncaught_error,%s,%s,%d,%s" % (s[0], t, s[1], p))
                     except _RejectionError:
                         buf.append("rejected,%s,%s,%d,%s" % (s[0], t, s[1], ""))
                         break   # Give up and try next scheme
                     except _TimeoutError:
                         buf.append("timeout,%s,%s,%d,%s" % (s[0], t, s[1], ""))
                         break   # Give up and try next scheme
+
         push(o_fm, buf)
         update(p_fm, target_count, success_count)
 
@@ -324,6 +330,8 @@ if (__name__ == "__main__"):
                             help="combine user/pass by cartesian join")
     parser.add_argument("--paths", metavar="PATH", nargs="+", default=["/"],
                             help="URL path(s) to basic auth page (default = /)")
+    parser.add_argument("--resume", type=int, metavar="N",
+                        help="resume from an arbitrary line in targets file")
 
     group4 = parser.add_argument_group("success criteria")
     group4.add_argument("--no-precheck", action="store_true",
@@ -347,11 +355,6 @@ if (__name__ == "__main__"):
     group5.add_argument("--timeout", type=int, default=10,
                         help="seconds to timeout requests (default = 10)")
     
-    group7 = parser.add_argument_group("batch control",
-               ("can be used to resume interrupted sessions or "
-               "distribute work across multiple instances"))
-    group7.add_argument("--start", type=int, help="start line (inclusive)")
-    group7.add_argument("--end", type=int, help="end line (inclusive)")
 
     args = parser.parse_args()
     main(args)
