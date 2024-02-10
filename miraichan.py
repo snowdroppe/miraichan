@@ -243,7 +243,7 @@ def main(args):
             proto = ["https"]
         else:
             proto = ["http", "https"]
-        schemes = product(proto, args.ports)
+        schemes = [list(i) for i in product(proto, args.ports)]
 
     # Calculate credential pairs
     usernames, passwords = None, None
@@ -258,16 +258,16 @@ def main(args):
 
     if (usernames and passwords):
         if (args.clusterbomb):
-            creds = product(usernames, passwords)
+            creds = [list(i) for i in product(usernames, passwords)]
         else:
             if (len(usernames) != len(passwords)):
                 raise IndexError("Dissimilar sized username and password"
                                  "lists cannot be used with pitchfork")
             creds = [list(i) for i in zip(usernames, passwords)]
     elif (usernames):
-        creds = product(usernames, [args.password])
+        creds = [list(i) for i in product(usernames, [args.password])]
     elif (passwords):
-        creds = product([args.login], passwords)
+        creds = [list(i) for i in product([args.login], passwords)]
     else:
         creds = [[args.login, args.password]]
 
@@ -328,9 +328,9 @@ if (__name__ == "__main__"):
     group4 = parser.add_argument_group("success criteria")
     group4.add_argument("--no-precheck", action="store_true",
                         help="disable default precheck to ensure page serves basic auth")
-    group4.add_argument("--success",  metavar="STRING", nargs="+",
+    group4.add_argument("--success",  metavar="STRING",
                         help="response string required to qualify a success")
-    group4.add_argument("--fail",  metavar="STRING", nargs="+",
+    group4.add_argument("--fail",  metavar="STRING",
                         help="response string sufficient to qualify a fail")
 
     group5 = parser.add_argument_group("connection",
