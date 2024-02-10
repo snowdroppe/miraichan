@@ -4,9 +4,9 @@ import sys
 import time
 import signal
 import threading
+from itertools import product
 import argparse
 import requests
-from itertools import product
 import progressbar
 
 proxies = None  # Passed to requests as-is
@@ -77,6 +77,8 @@ class SmartGet:
                     print(r.headers)
                 if ('www-authenticate' not in r.headers.keys()):
                     raise _NoAuthError
+        except _NoAuthError as e:
+            raise e
         except requests.exceptions.ConnectionError as e:
             if ("Connection refused" in str(e)):
                 raise _RejectionError
@@ -278,8 +280,9 @@ def main(args):
     progress = [0,0]    # (completed targets, successful responses)
     p_fm = FileMutex(progress, threading.Lock())
     threads = []
-    t = threading.Thread(target=overseer, args=(p_fm, target_count))
-    threads.append(t)
+    if (not debug):
+        t = threading.Thread(target=overseer, args=(p_fm, target_count))
+        threads.append(t)
     for i in range(args.threads):
         t = threading.Thread(target=worker, args=(t_fm, o_fm, p_fm, schemes, args.paths, creds))
         threads.append(t)
