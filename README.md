@@ -85,6 +85,10 @@ Output is standardised as a comma delimited UTF-8 encoded file with the followin
   - `noauth` - The web server failed to present a basic auth realm.
   - `rejection` - The request was actively rejected (e.g. firewall, DNS failure, invalid service).
   - `timeout` - The target was unreachable within the set timeout period.
+- protocol ["https"|"http"]
+- target [str]
+- port [int]
+- path [str]
 
 ## Future Goals
 - [ ] Additional field testing for uncaught errors
