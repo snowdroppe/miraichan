@@ -93,4 +93,4 @@ Output is standardised as a comma delimited UTF-8 encoded file with the followin
 ## Future Goals
 - [ ] Additional field testing for uncaught errors
 - [ ] Add database connectors for easier workflows
-- [ ] Add distrubuted execution modes for serious networking power
+- [ ] Add distributed execution modes for serious networking power
