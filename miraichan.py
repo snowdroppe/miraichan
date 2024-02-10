@@ -243,7 +243,7 @@ def main(args):
             proto = ["https"]
         else:
             proto = ["http", "https"]
-        schemes = product(proto, ports)
+        schemes = product(proto, args.ports)
 
     # Calculate credential pairs
     usernames, passwords = None, None
