@@ -9,30 +9,16 @@ import argparse
 import requests
 import progressbar
 
+
 proxies = None  # Passed to requests as-is
 headers = {
         "Cookie": None,
-        "User-Agent": "python/2.7"
+        "User-Agent": "python/miraichan"
         }
 buffer_size = 128  # Input buffer size of worker (bytes)
 debug = False    # Be very verbose about packet requests / responses
 suicide = False  # Global flag to gracefully terminate threads
 
-"""
-timeout /host /port
-    -host is down
-rejection /host /port
-    -packet rejected
-    -non http response
-noauth
-    -fail precheck i.e. no WWW-Authenticate header
-fail /host /port /path /cred
-    -bad creds i.e. 401 with creds
-    -contains fail string
-success
-    -contains success string
-    -break on success
-"""
 
 class _TimeoutError(Exception):
     pass
@@ -49,10 +35,19 @@ class _NoAuthError(Exception):
 class _UncaughtError(Exception):
     pass
 
+
+def sigint_handler(sig, frame):
+    global suicide
+    if (not suicide):
+        print("\nKilling threads...\n")
+        suicide = True
+
+
 class FileMutex:
     def __init__(self, file, mutex):
         self.file = file
         self.mutex = mutex
+
 
 class SmartGet:
     def __init__(self, args):
@@ -152,10 +147,6 @@ class SmartGet:
         raise _FailError  # Exhausted all creds
 
 
-def sigint_handler(signal):
-    pass
-
-
 def worker(t_fm, o_fm, p_fm, schemes, paths, creds):
     def pull(t_fm):
         with t_fm.mutex:
@@ -208,6 +199,8 @@ def worker(t_fm, o_fm, p_fm, schemes, paths, creds):
                         buf.append("timeout,%s,%s,%d,%s" % (s[0], t, s[1], ""))
                         break   # Give up and try next scheme
 
+        if (suicide):
+            break
         push(o_fm, buf)
         update(p_fm, target_count, success_count)
 
@@ -215,7 +208,8 @@ def overseer(p_fm, N):
     p = (0, 0)
     with progressbar.ProgressBar(
             max_value=N, widgets=[
-                progressbar.Variable("success_count", format="Success: {formatted_value}", width=4),
+                progressbar.Variable("success_count",
+                                     format="Success: {formatted_value}", width=4),
                 " | ", progressbar.Percentage(), " ", progressbar.GranularBar(),
                 " ", progressbar.Timer(), " ", progressbar.AdaptiveETA()
                 ]) as bar:
@@ -227,10 +221,14 @@ def overseer(p_fm, N):
             if (p[0] == N or suicide):
                 break
             time.sleep(0.5)
+    if (suicide):
+        print("\n" + "="*41)
+        print("="*10 + " Resume line: %6d " % (p[0],) + "="*10)
+        print("="*41 + "\n")
 
 
 def main(args):
-    # TODO catch and handle sigint
+    signal.signal(signal.SIGINT, sigint_handler)
     print("")
     if (not args.verify):
         requests.packages.urllib3.disable_warnings()    # Shhhhhhh
@@ -285,6 +283,10 @@ def main(args):
     o_fm = FileMutex(open(args.outfile, "w"), threading.Lock())
     progress = [0,0]    # (completed targets, successful responses)
     p_fm = FileMutex(progress, threading.Lock())
+    if (args.resume):
+        target_count -= args.resume
+        for i in range(args.resume):
+            t_fm.file.readline()
     threads = []
     if (not debug):
         t = threading.Thread(target=overseer, args=(p_fm, target_count))
@@ -300,8 +302,9 @@ def main(args):
         t.join()
     t_fm.file.close()
     o_fm.file.close()
-    print("")
-    print("All targets scanned :)")
+    if (not suicide):
+        print("")
+        print("All targets scanned")
 
 
 if (__name__ == "__main__"):
