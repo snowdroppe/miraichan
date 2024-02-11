@@ -21,6 +21,9 @@ Optimisations made:
 - Conditional bailouts to prevent unnecessary checks
 - Resume function to rescue failed runs
 
+## Installation
+The only pre-requisites are a base install of python3 and pip3. Dependencies can be installed with `pip3 install -r requirements.txt`
+
 ## Usage
 The script is self-documenting and includes an exhaustive help listing available through `python3 miraichan.py -h`
 
