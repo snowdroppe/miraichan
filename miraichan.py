@@ -15,7 +15,7 @@ headers = {
         "Cookie": None,
         "User-Agent": "python/miraichan"
         }
-buffer_size = 128  # Input buffer size of worker (bytes)
+buffer_size = 64  # Input buffer size of worker (bytes)
 debug = False    # Be very verbose about packet requests / responses
 suicide = False  # Global flag to gracefully terminate threads
 
@@ -77,13 +77,13 @@ class SmartGet:
                     raise _NoAuthError
         except _NoAuthError as e:
             raise e
+        except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout):
+            raise _TimeoutError
         except requests.exceptions.ConnectionError as e:
             if ("Connection refused" in str(e)):
                 raise _RejectionError
             elif ("Failed to resolve" in str(e)):
                 raise _TimeoutError
-        except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout):
-            raise _TimeoutError
         except requests.exceptions.SSLError:
             raise _FailError
         except Exception as e:
@@ -130,13 +130,13 @@ class SmartGet:
                 else:
                     return c    # Success!
 
+            except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout):
+                raise _TimeoutError
             except requests.exceptions.ConnectionError as e:
                 if ("Connection refused" in str(e)):
                     raise _RejectionError
                 elif ("Failed to resolve" in str(e)):
                     raise _TimeoutError
-            except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout):
-                raise _TimeoutError
             except requests.exceptions.SSLError:
                 raise _FailError
             except Exception as e:
@@ -355,8 +355,8 @@ if (__name__ == "__main__"):
                         help="port(s) to connect on (will be forced for chosen protocols)")
     group5.add_argument("--threads", type=int, default=10,
                         help="number of threads to spawn (default = 10)")
-    group5.add_argument("--timeout", type=int, default=10,
-                        help="seconds to timeout requests (default = 10)")
+    group5.add_argument("--timeout", type=int, default=5,
+                        help="seconds to timeout requests (default = 5)")
     
 
     args = parser.parse_args()
